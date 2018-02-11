@@ -1,6 +1,6 @@
-//ETH/USD 9 Dec 2017 11:00 EST => 9 Dec 2017 16:00 UTC => 10 Dec 2017 03:00 AEST => 489.44 from CMC
-var ethPriceUSD = 489.44;
-var defaultGasPrice = web3.toWei(50, "gwei");
+//ETH/USD 10 Feb 2018 22:19:17 AEDT
+var ethPriceUSD = 871.31;
+var defaultGasPrice = web3.toWei(1, "gwei");
 
 
 // -----------------------------------------------------------------------------
@@ -247,6 +247,13 @@ function printTokenContractDetails() {
     console.log("RESULT: token.transferable=" + contract.transferable());
     console.log("RESULT: token.mintable=" + contract.mintable());
     console.log("RESULT: token.minter=" + contract.minter());
+    console.log("RESULT: token.accountLocked(account3)=" + contract.accountLocked(account3));
+    console.log("RESULT: token.accountLocked(account4)=" + contract.accountLocked(account4));
+    console.log("RESULT: token.nextNonce(account3)=" + contract.nextNonce(account3));
+    console.log("RESULT: token.nextNonce(account4)=" + contract.nextNonce(account4));
+    console.log("RESULT: token.nextNonce(account5)=" + contract.nextNonce(account5));
+    console.log("RESULT: token.nextNonce(account6)=" + contract.nextNonce(account6));
+    console.log("RESULT: token.nextNonce(account7)=" + contract.nextNonce(account7));
 
     var latestBlock = eth.blockNumber;
     var i;
@@ -353,9 +360,13 @@ function printFactoryContractDetails() {
     var contract = eth.contract(factoryContractAbi).at(factoryContractAddress);
     console.log("RESULT: factory.owner=" + contract.owner());
     console.log("RESULT: factory.newOwner=" + contract.newOwner());
+    console.log("RESULT: factory.numberOfDeployedTokens=" + contract.numberOfDeployedTokens());
+    var i;
+    for (i = 0; i < contract.numberOfDeployedTokens(); i++) {
+        console.log("RESULT: factory.deployedTokens(" + i + ")=" + contract.deployedTokens(i));
+    }
 
     var latestBlock = eth.blockNumber;
-    var i;
 
     var ownershipTransferredEvents = contract.OwnershipTransferred({}, { fromBlock: factoryFromBlock, toBlock: latestBlock });
     i = 0;
@@ -372,6 +383,39 @@ function printFactoryContractDetails() {
     bttsTokenListingEvents.stopWatching();
 
     factoryFromBlock = latestBlock + 1;
+  }
+}
+
+
+//-----------------------------------------------------------------------------
+// Test Contract
+//-----------------------------------------------------------------------------
+var testContractAddress = null;
+var testContractAbi = null;
+
+function addTestContractAddressAndAbi(address, tokenAbi) {
+  testContractAddress = address;
+  testContractAbi = tokenAbi;
+}
+
+var testFromBlock = 0;
+
+function printTestContractDetails() {
+  console.log("RESULT: testContractAddress=" + testContractAddress);
+  if (testContractAddress != null && testContractAbi != null) {
+    var contract = eth.contract(testContractAbi).at(testContractAddress);
+
+    var latestBlock = eth.blockNumber;
+    var i;
+
+    var logBytesEvents = contract.LogBytes({}, { fromBlock: testFromBlock, toBlock: latestBlock });
+    i = 0;
+    logBytesEvents.watch(function (error, result) {
+      console.log("RESULT: LogBytes " + i++ + " #" + result.blockNumber + " " + result.args.data + " '" + web3.toAscii(result.args.data) + "'");
+    });
+    logBytesEvents.stopWatching();
+
+    testFromBlock = latestBlock + 1;
   }
 }
 

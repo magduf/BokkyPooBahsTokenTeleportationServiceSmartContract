@@ -12,8 +12,10 @@ PASSWORD=`grep ^PASSWORD= settings.txt | sed "s/^.*=//"`
 
 SOURCEDIR=`grep ^SOURCEDIR= settings.txt | sed "s/^.*=//"`
 
-CROWDSALESOL=`grep ^CROWDSALESOL= settings.txt | sed "s/^.*=//"`
-CROWDSALEJS=`grep ^CROWDSALEJS= settings.txt | sed "s/^.*=//"`
+TOKENFACTORYSOL=`grep ^TOKENFACTORYSOL= settings.txt | sed "s/^.*=//"`
+TOKENFACTORYJS=`grep ^TOKENFACTORYJS= settings.txt | sed "s/^.*=//"`
+TESTSOL=`grep ^TESTSOL= settings.txt | sed "s/^.*=//"`
+TESTJS=`grep ^TESTJS= settings.txt | sed "s/^.*=//"`
 
 DEPLOYMENTDATA=`grep ^DEPLOYMENTDATA= settings.txt | sed "s/^.*=//"`
 
@@ -23,8 +25,6 @@ TEST1RESULTS=`grep ^TEST1RESULTS= settings.txt | sed "s/^.*=//"`
 
 CURRENTTIME=`date +%s`
 CURRENTTIMES=`date -r $CURRENTTIME -u`
-
-BLOCKSINDAY=10
 
 if [ "$MODE" == "dev" ]; then
   # Start time now
@@ -41,8 +41,10 @@ printf "MODE            = '$MODE'\n" | tee $TEST1OUTPUT
 printf "GETHATTACHPOINT = '$GETHATTACHPOINT'\n" | tee -a $TEST1OUTPUT
 printf "PASSWORD        = '$PASSWORD'\n" | tee -a $TEST1OUTPUT
 printf "SOURCEDIR       = '$SOURCEDIR'\n" | tee -a $TEST1OUTPUT
-printf "CROWDSALESOL    = '$CROWDSALESOL'\n" | tee -a $TEST1OUTPUT
-printf "CROWDSALEJS     = '$CROWDSALEJS'\n" | tee -a $TEST1OUTPUT
+printf "TOKENFACTORYSOL = '$TOKENFACTORYSOL'\n" | tee -a $TEST1OUTPUT
+printf "TOKENFACTORYJS  = '$TOKENFACTORYJS'\n" | tee -a $TEST1OUTPUT
+printf "TESTSOL         = '$TESTSOL'\n" | tee -a $TEST1OUTPUT
+printf "TESTJS          = '$TESTJS'\n" | tee -a $TEST1OUTPUT
 printf "DEPLOYMENTDATA  = '$DEPLOYMENTDATA'\n" | tee -a $TEST1OUTPUT
 printf "INCLUDEJS       = '$INCLUDEJS'\n" | tee -a $TEST1OUTPUT
 printf "TEST1OUTPUT     = '$TEST1OUTPUT'\n" | tee -a $TEST1OUTPUT
@@ -53,34 +55,35 @@ printf "ENDTIME         = '$ENDTIME' '$ENDTIME_S'\n" | tee -a $TEST1OUTPUT
 
 # Make copy of SOL file and modify start and end times ---
 # `cp modifiedContracts/SnipCoin.sol .`
-`cp $SOURCEDIR/$CROWDSALESOL .`
+`cp $SOURCEDIR/$TOKENFACTORYSOL .`
+`cp $SOURCEDIR/$TESTSOL .`
 
 # --- Modify parameters ---
 # `perl -pi -e "s/bool transferable/bool public transferable/" $TOKENSOL`
-# `perl -pi -e "s/MULTISIG_WALLET_ADDRESS \= 0xc79ab28c5c03f1e7fbef056167364e6782f9ff4f;/MULTISIG_WALLET_ADDRESS \= 0xa22AB8A9D641CE77e06D98b7D7065d324D3d6976;/" GimliCrowdsale.sol`
-# `perl -pi -e "s/START_DATE = 1505736000;.*$/START_DATE \= $STARTTIME; \/\/ $STARTTIME_S/" GimliCrowdsale.sol`
-# `perl -pi -e "s/END_DATE = 1508500800;.*$/END_DATE \= $ENDTIME; \/\/ $ENDTIME_S/" GimliCrowdsale.sol`
-# `perl -pi -e "s/VESTING_1_DATE = 1537272000;.*$/VESTING_1_DATE \= $VESTING1TIME; \/\/ $VESTING1TIME_S/" GimliCrowdsale.sol`
-# `perl -pi -e "s/VESTING_2_DATE = 1568808000;.*$/VESTING_2_DATE \= $VESTING2TIME; \/\/ $VESTING2TIME_S/" GimliCrowdsale.sol`
 
-DIFFS1=`diff $SOURCEDIR/$CROWDSALESOL $CROWDSALESOL`
-echo "--- Differences $SOURCEDIR/$CROWDSALESOL $CROWDSALESOL ---" | tee -a $TEST1OUTPUT
+DIFFS1=`diff $SOURCEDIR/$TOKENFACTORYSOL $TOKENFACTORYSOL`
+echo "--- Differences $SOURCEDIR/$TOKENFACTORYSOL $TOKENFACTORYSOL ---" | tee -a $TEST1OUTPUT
 echo "$DIFFS1" | tee -a $TEST1OUTPUT
 
 solc_0.4.18 --version | tee -a $TEST1OUTPUT
 
-echo "var tokenOutput=`solc_0.4.18 --optimize --pretty-json --combined-json abi,bin,interface $CROWDSALESOL`;" > $CROWDSALEJS
+echo "var tokenFactoryOutput=`solc_0.4.18 --optimize --pretty-json --combined-json abi,bin,interface $TOKENFACTORYSOL`;" > $TOKENFACTORYJS
+echo "var testOutput=`solc_0.4.18 --optimize --pretty-json --combined-json abi,bin,interface $TESTSOL`;" > $TESTJS
 
 geth --verbosity 3 attach $GETHATTACHPOINT << EOF | tee -a $TEST1OUTPUT
-loadScript("$CROWDSALEJS");
+loadScript("$TOKENFACTORYJS");
+loadScript("$TESTJS");
 loadScript("functions.js");
+loadScript("bttsHelperFunctions.js");
 
-var libBTTSAbi = JSON.parse(tokenOutput.contracts["$CROWDSALESOL:BTTSLib"].abi);
-var libBTTSBin = "0x" + tokenOutput.contracts["$CROWDSALESOL:BTTSLib"].bin;
-var tokenAbi = JSON.parse(tokenOutput.contracts["$CROWDSALESOL:BTTSToken"].abi);
-var tokenBin = "0x" + tokenOutput.contracts["$CROWDSALESOL:BTTSToken"].bin;
-var factoryAbi = JSON.parse(tokenOutput.contracts["$CROWDSALESOL:BTTSTokenFactory"].abi);
-var factoryBin = "0x" + tokenOutput.contracts["$CROWDSALESOL:BTTSTokenFactory"].bin;
+var libBTTSAbi = JSON.parse(tokenFactoryOutput.contracts["$TOKENFACTORYSOL:BTTSLib"].abi);
+var libBTTSBin = "0x" + tokenFactoryOutput.contracts["$TOKENFACTORYSOL:BTTSLib"].bin;
+var tokenAbi = JSON.parse(tokenFactoryOutput.contracts["$TOKENFACTORYSOL:BTTSToken"].abi);
+var tokenBin = "0x" + tokenFactoryOutput.contracts["$TOKENFACTORYSOL:BTTSToken"].bin;
+var factoryAbi = JSON.parse(tokenFactoryOutput.contracts["$TOKENFACTORYSOL:BTTSTokenFactory"].abi);
+var factoryBin = "0x" + tokenFactoryOutput.contracts["$TOKENFACTORYSOL:BTTSTokenFactory"].bin;
+var testAbi = JSON.parse(testOutput.contracts["$TESTSOL:TestApproveAndCallFallBack"].abi);
+var testBin = "0x" + testOutput.contracts["$TESTSOL:TestApproveAndCallFallBack"].bin;
 
 // console.log("DATA: libBTTSAbi=" + JSON.stringify(libBTTSAbi));
 // console.log("DATA: libBTTSBin=" + JSON.stringify(libBTTSBin));
@@ -88,9 +91,42 @@ var factoryBin = "0x" + tokenOutput.contracts["$CROWDSALESOL:BTTSTokenFactory"].
 // console.log("DATA: tokenBin=" + JSON.stringify(tokenBin));
 // console.log("DATA: factoryAbi=" + JSON.stringify(factoryAbi));
 // console.log("DATA: factoryBin=" + JSON.stringify(factoryBin));
+// console.log("DATA: testAbi=" + JSON.stringify(testAbi));
+// console.log("DATA: testBin=" + JSON.stringify(testBin));
 
 unlockAccounts("$PASSWORD");
 printBalances();
+console.log("RESULT: ");
+
+
+// -----------------------------------------------------------------------------
+var deployTestMessage = "Deploy Test ApproveAndCallFallBack Contract";
+// -----------------------------------------------------------------------------
+console.log("RESULT: --- " + deployTestMessage + " ---");
+var testContract = web3.eth.contract(testAbi);
+// console.log(JSON.stringify(testContract));
+var testTx = null;
+var testAddress = null;
+var test = testContract.new({from: contractOwnerAccount, data: testBin, gas: 6000000, gasPrice: defaultGasPrice},
+  function(e, contract) {
+    if (!e) {
+      if (!contract.address) {
+        testTx = contract.transactionHash;
+      } else {
+        testAddress = contract.address;
+        addAccount(testAddress, "Test ApproveAndCallFallBack");
+        addTestContractAddressAndAbi(testAddress, testAbi);
+        console.log("DATA: testAddress=" + testAddress);
+      }
+    }
+  }
+);
+while (txpool.status.pending > 0) {
+}
+printBalances();
+failIfTxStatusError(testTx, deployTestMessage);
+printTxData("testTx", testTx);
+printTestContractDetails();
 console.log("RESULT: ");
 
 
@@ -250,95 +286,6 @@ console.log("RESULT: ");
 
 
 // -----------------------------------------------------------------------------
-// BTTS support functions
-// -----------------------------------------------------------------------------
-function signedTransferCheckResultString(e) {
-  var text = "Unknown";
-  if (e == 0) {
-    text = "Success"
-  } else if (e == 1) {
-    text = "NotTransferable";
-  } else if (e == 2) {
-    text = "AccountLocked";
-  } else if (e == 3) {
-    text = "SignerMismatch";
-  } else if (e == 4) {
-    text = "AlreadyExecuted";
-  } else if (e == 5) {
-    text = "InsufficientApprovedTokens";
-  } else if (e == 6) {
-    text = "InsufficientApprovedTokensForFees";
-  } else if (e == 7) {
-    text = "InsufficientTokens";
-  } else if (e == 8) {
-    text = "InsufficientTokensForFees";
-  } else if (e == 9) {
-    text = "OverflowError";
-  } else {
-    text = "Unknown";
-  }
-  return text;
-}
-
-function padLeft0(s, n) {
-  var result = s.toString();
-  while (result.length < n) {
-    result = "0" + result;
-  }
-  return result;
-}
-
-function bytes4ToHex(bytes4) {
-  if (bytes4.substring(0, 2) == "0x") {
-    return padLeft0(bytes4.substring(2, 10), 8);
-  } else {
-    return padLeft0(bytes4.substring(0, 8), 8);
-  } 
-}
-
-function addressToHex(address) {
-  if (address.substring(0, 2) == "0x") {
-    return padLeft0(address.substring(2, 42).toLowerCase(), 40);
-  } else {
-    return padLeft0(address.substring(0, 40).toLowerCase(), 40);
-  } 
-}
-
-function uint256ToHex(number) {
-  var bigNumber = new BigNumber(number).toString(16);
-  if (bigNumber.substring(0, 2) == "0x") {
-    return padLeft0(bigNumber.substring(2, 66).toLowerCase(), 64);
-  } else {
-    return padLeft0(bigNumber.substring(0, 64).toLowerCase(), 64);
-  } 
-}
-
-function getSigR(sig) {
-  if (sig.substring(0, 2) == "0x") {
-    return "0x" + sig.substring(2, 66);
-  } else {
-    return "0x" + sig.substring(0, 64)
-  } 
-}
-
-function getSigS(sig) {
-  if (sig.substring(0, 2) == "0x") {
-    return "0x" + sig.substring(66, 130);
-  } else {
-    return "0x" + sig.substring(64, 128)
-  } 
-}
-
-function getSigV(sig) {
-  if (sig.substring(0, 2) == "0x") {
-    return "0x" + sig.substring(130, 132);
-  } else {
-    return "0x" + sig.substring(128, 130)
-  } 
-}
-
-
-// -----------------------------------------------------------------------------
 var signedTransferMessage = "Signed Transfers";
 var functionSig = web3.sha3("signedTransfer(address,address,uint256,uint256,uint256,bytes,address)").substring(0,10);
 var tokenContractAddress = tokenAddress;
@@ -347,7 +294,7 @@ var to = account5;
 var tokens = new BigNumber("1000000000000000000");
 var fee = new BigNumber("10000000000000000");
 var feeToken = token;
-var nonce = "0";
+var nonce = token.nextNonce(from);
 // -----------------------------------------------------------------------------
 
 var hashOf = "0x" + bytes4ToHex(functionSig) + addressToHex(tokenContractAddress) + addressToHex(from) + addressToHex(to) + uint256ToHex(tokens) + uint256ToHex(fee) + uint256ToHex(nonce);
@@ -366,12 +313,13 @@ console.log("RESULT: fee=" + fee + " " + fee.shift(-decimals));
 console.log("RESULT: nonce=" + nonce);
 var signedTransferHash = token.signedTransferHash(from, to, tokens, fee, nonce);
 console.log("RESULT: signedTransferHash=" + signedTransferHash);
+console.log("RESULT: Should match hash=" + hash);
 var sig = web3.eth.sign(from, signedTransferHash);
 console.log("RESULT: sig=" + sig);
 
 var signedTransfer1Check = token.signedTransferCheck(from, to, tokens, fee, nonce, sig, feeAccount);
 console.log("RESULT: signedTransfer1Check=" + signedTransfer1Check + " " + signedTransferCheckResultString(signedTransfer1Check));
-var signedTransfer1Tx = token.signedTransfer(from, to, tokens, fee, nonce, sig, feeAccount, 
+var signedTransfer1Tx = token.signedTransfer(from, to, tokens, fee, nonce, sig, feeAccount,
   {from: contractOwnerAccount, gas: 200000, gasPrice: defaultGasPrice});
 while (txpool.status.pending > 0) {
 }
@@ -403,11 +351,10 @@ var owner = account4;
 var spender = account6;
 var tokens = "50000000000000000000";
 var fee = "500000000000000000";
-var nonce = "0";
+var nonce = token.nextNonce(account4);
 // -----------------------------------------------------------------------------
 
-var signedApproveHash = token.signedApproveHash(tokenContractAddress,
-  owner, spender, tokens, fee);
+var signedApproveHash = token.signedApproveHash(owner, spender, tokens, fee, nonce);
 console.log("RESULT: signedApproveHash=" + signedApproveHash);
 
 // -----------------------------------------------------------------------------
@@ -418,6 +365,7 @@ var hashOf = "0x" + bytes4ToHex(functionSig) + addressToHex(tokenContractAddress
 console.log("RESULT: hashOf=" + hashOf);
 var hash = web3.sha3(hashOf, {encoding: 'hex'});
 console.log("RESULT: hash=" + hash);
+console.log("RESULT: Should match signedApproveHash=" + signedApproveHash);
 var sig = web3.eth.sign(account4, hash);
 
 // var sig = web3.eth.sign(account4, signedApproveHash);
@@ -459,7 +407,7 @@ var from = account4;
 var to = account7;
 var tokens = "3000000000000000000";
 var fee = "30000000000000000";
-
+var nonce = token.nextNonce(spender);
 
 var signedTransferFromHash = token.signedTransferFromHash(spender, from, to, tokens, fee, nonce);
 console.log("RESULT: signedTransferFromHash=" + signedTransferFromHash);
@@ -472,6 +420,7 @@ var hashOf = "0x" + bytes4ToHex(functionSig) + addressToHex(tokenContractAddress
 console.log("RESULT: hashOf=" + hashOf);
 var hash = web3.sha3(hashOf, {encoding: 'hex'});
 console.log("RESULT: hash=" + hash);
+console.log("RESULT: Should match signedTransferFromHash=" + signedTransferFromHash);
 var sig = web3.eth.sign(account6, hash);
 
 // var sig = web3.eth.sign(account4, signedTransferFromHash);
@@ -505,6 +454,58 @@ console.log("RESULT: ");
 
 
 // -----------------------------------------------------------------------------
+var signedApproveAndCallMessage = "Test Signed ApproveAndCall 456.789 tokens with 'World' message";
+var functionSig = web3.sha3("signedApproveAndCall(address,address,uint256,bytes,uint256,uint256,bytes,address)").substring(0,10);
+var tokenContractAddress = tokenAddress;
+var owner = account4;
+var spender = testAddress;
+var tokens = "456789000000000000000";
+var data = "World";
+var fee = "123000000000000000";
+var nonce = token.nextNonce(owner);
+// -----------------------------------------------------------------------------
+
+var signedApproveAndCallHash = token.signedApproveAndCallHash(owner, spender, tokens, data, fee, nonce);
+console.log("RESULT: signedApproveAndCallHash=" + signedApproveAndCallHash);
+
+// -----------------------------------------------------------------------------
+console.log("RESULT: --- " + signedApproveAndCallMessage + " ---");
+console.log("RESULT: functionSig=" + functionSig + " (should be '0xf16f9b53')");
+
+var hashOf = "0x" + bytes4ToHex(functionSig) + addressToHex(tokenContractAddress) + addressToHex(owner) + addressToHex(spender) + uint256ToHex(tokens) + stringToHex(data) + uint256ToHex(fee) + uint256ToHex(nonce);
+
+console.log("RESULT: hashOf=" + hashOf);
+var hash = web3.sha3(hashOf, {encoding: 'hex'});
+console.log("RESULT: hash=" + hash);
+console.log("RESULT: Should match signedApproveAndCallHash=" + signedApproveAndCallHash);
+var sig = web3.eth.sign(account4, hash);
+
+// var sig = web3.eth.sign(account4, signedApproveAndCallHash);
+console.log("RESULT: sig=" + sig);
+
+var signedApproveAndCall1Check = token.signedApproveAndCallCheck(owner, spender, tokens, data, fee, nonce, sig, feeAccount);
+console.log("RESULT: signedApproveAndCall1Check=" + signedApproveAndCall1Check + " " + signedTransferCheckResultString(signedApproveAndCall1Check));
+var signedApproveAndCall1Tx = token.signedApproveAndCall(owner, spender, tokens, data, fee, nonce, sig, feeAccount,
+  {from: contractOwnerAccount, gas: 200000, gasPrice: defaultGasPrice});
+while (txpool.status.pending > 0) {
+}
+var signedApproveAndCall2Check = token.signedApproveAndCallCheck(owner, spender, tokens, data, fee, nonce, sig, feeAccount);
+console.log("RESULT: signedApproveAndCall2Check=" + signedApproveAndCall2Check + " " + signedTransferCheckResultString(signedApproveAndCall2Check));
+var signedApproveAndCall2Tx = token.signedApproveAndCall(owner, spender, tokens, data, fee, nonce, sig, feeAccount,
+  {from: contractOwnerAccount, gas: 200000, gasPrice: defaultGasPrice});
+while (txpool.status.pending > 0) {
+}
+printBalances();
+failIfTxStatusError(signedApproveAndCall1Tx, signedApproveAndCallMessage);
+passIfTxStatusError(signedApproveAndCall2Tx, signedApproveAndCallMessage + " - Duplicated - Expecting Failure");
+printTxData("signedApproveAndCall1Tx", signedApproveAndCall1Tx);
+printTxData("signedApproveAndCall2Tx", signedApproveAndCall2Tx);
+printTokenContractDetails();
+printTestContractDetails();
+console.log("RESULT: ");
+
+
+// -----------------------------------------------------------------------------
 var transferTokenMessage = "Transfer Tokens";
 // -----------------------------------------------------------------------------
 console.log("RESULT: --- " + transferTokenMessage + " ---");
@@ -522,7 +523,22 @@ console.log("RESULT: ");
 
 
 // -----------------------------------------------------------------------------
-var moveTokenMessage = "Move 0 Tokens After Transfers Allowed";
+var approveAndCallTestMessage = "Test approveAndCall 123.456 tokens with 'Hello' message";
+// -----------------------------------------------------------------------------
+console.log("RESULT: --- " + approveAndCallTestMessage + " ---");
+var approveAndCallTest1Tx = token.approveAndCall(testAddress,  "123456000000000000000", "Hello", {from: account3, gas: 400000, gasPrice: defaultGasPrice});
+while (txpool.status.pending > 0) {
+}
+printBalances();
+failIfTxStatusError(approveAndCallTest1Tx, approveAndCallTestMessage);
+printTxData("approveToken2Tx", approveAndCallTest1Tx);
+printTokenContractDetails();
+printTestContractDetails();
+console.log("RESULT: ");
+
+
+// -----------------------------------------------------------------------------
+var moveTokenMessage = "Move 0 Tokens";
 // -----------------------------------------------------------------------------
 console.log("RESULT: --- " + moveTokenMessage + " ---");
 var moveToken1Tx = token.transfer(account5, "0", {from: account3, gas: 100000, gasPrice: defaultGasPrice});
