@@ -1,0 +1,10 @@
+personal.unlockAccount("0x3cce38471635b96341c17b07d59f8abdfbde1118")
+personal.unlockAccount(eth.accounts[0])
+personal.unlockAccount(eth.accounts[0], "11111", 6000)
+11111
+miner.start()
+
+var acctBal = web3.fromWei(eth.getBalance(eth.accounts[0]), "ether");
+console.log("  eth.accounts[0]: \t" + eth.accounts[0] + " \tbalance: " + web3.fromWei(eth.getBalance(eth.accounts[0]), "ether") + " ether");
+
+ eth.getBlock("latest")
